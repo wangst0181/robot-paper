@@ -252,16 +252,171 @@ http://localhost:8000/topics/01-human-video-to-robot/01-human-video-to-robot.htm
 - 论文事实、结构化解读和作者报告指标标记清楚；
 - 不存在 `TODO`、`FIXME` 或占位文本。
 
-## 10. GitHub Pages 发布路径
+## 10. 使用 Git 命令更新 GitHub
 
-假设仓库名为 `paper-route-atlas`：
+本仓库远程地址为：
+
+```text
+https://github.com/wangst0181/robot-paper
+```
+
+以下流程适用于修改主题页面、增加论文、调整样式或更新维护文档。
+
+### 10.1 修改前先同步远程分支
+
+进入本地仓库并确认当前分支：
+
+```bash
+cd "/Users/siting/Desktop/化学具身/robot_paper_routes"
+git branch --show-current
+git status --short
+```
+
+在工作区没有未提交修改时，同步远程 `main`：
+
+```bash
+git pull --ff-only origin main
+```
+
+正常情况下当前分支应为 `main`。如果 `git status --short` 已经显示文件，不要立即执行 pull；先确认这些修改是否需要保留。
+
+### 10.2 修改后先验证页面
+
+```bash
+python3 scripts/validate_site.py
+python3 -m http.server 8000
+```
+
+在浏览器检查：
+
+```text
+http://localhost:8000/
+```
+
+检查结束后，在运行服务器的终端按 `Ctrl+C` 停止服务。
+
+### 10.3 检查本次修改范围
+
+```bash
+git status --short
+git diff
+```
+
+确认输出中只有本次任务相关文件。不要使用 `git add .` 或 `git add -A`，避免把临时文件或无关修改一起提交。
+
+### 10.4 精确暂存文件
+
+如果只修改了当前主题主页面：
+
+```bash
+git add -- topics/01-human-video-to-robot/01-human-video-to-robot.html
+```
+
+如果同时修改主题页、首页和样式：
+
+```bash
+git add -- \
+  index.html \
+  assets/styles.css \
+  topics/01-human-video-to-robot/01-human-video-to-robot.html
+```
+
+如果创建了一个完整的新主题，应明确写出该主题目录和首页：
+
+```bash
+git add -- \
+  index.html \
+  topics/02-topic-name/
+```
+
+论文 PDF 已被 `.gitignore` 排除，不应提交到 Git 历史。新增论文时，需要在 `.github/workflows/deploy-pages.yml` 的下载步骤中增加对应 arXiv PDF 下载命令，并把该工作流文件一起暂存。
+
+### 10.5 提交前检查暂存区
+
+```bash
+git diff --cached --stat
+git diff --cached
+```
+
+如果暂存了错误文件，可以在提交前取消暂存，不会删除本地修改：
+
+```bash
+git restore --staged -- 路径/文件名
+```
+
+### 10.6 创建提交并推送
+
+提交信息应简短说明修改目的：
+
+```bash
+git commit -m "Update human video to robot topic"
+git push origin main
+```
+
+常用提交信息示例：
+
+```text
+Add a new paper to human video topic
+Create tactile manipulation topic
+Update shared page styles
+Fix GitHub Pages deployment
+Update authoring guide
+```
+
+### 10.7 查看 GitHub Pages 部署
+
+每次推送到 `main` 都会触发 `.github/workflows/deploy-pages.yml`。可以打开：
+
+```text
+https://github.com/wangst0181/robot-paper/actions
+```
+
+如果已登录 GitHub CLI，也可以运行：
+
+```bash
+gh run list --repo wangst0181/robot-paper --limit 5
+```
+
+等待最新的 `Deploy research pages` 工作流变为绿色后，再检查线上页面。
+
+### 10.8 常见 Git 问题
+
+#### `nothing to commit, working tree clean`
+
+没有新的修改需要提交，或修改尚未保存。运行 `git status --short` 检查。
+
+#### `non-fast-forward` 或 push 被拒绝
+
+远程分支存在本地没有的更新。不要强制推送。先运行：
+
+```bash
+git status --short
+git pull --rebase origin main
+git push origin main
+```
+
+如果 rebase 出现冲突，停止继续推送，先检查冲突文件。
+
+#### Pages 工作流失败在 `Configure GitHub Pages`
+
+进入仓库：
+
+```text
+Settings → Pages → Build and deployment → Source → GitHub Actions
+```
+
+首次发布必须手动选择一次 GitHub Actions。工作流中的 `actions/configure-pages@v5` 不应设置 `enablement: true`，因为默认 `GITHUB_TOKEN` 无权首次创建 Pages 站点。
+
+## 11. GitHub Pages 发布路径
+
+当前仓库名为 `robot-paper`：
 
 ```text
 主题总目录：
-https://<username>.github.io/paper-route-atlas/
+https://wangst0181.github.io/robot-paper/
 
 本主题页面：
-https://<username>.github.io/paper-route-atlas/topics/01-human-video-to-robot/01-human-video-to-robot.html
+https://wangst0181.github.io/robot-paper/topics/01-human-video-to-robot/01-human-video-to-robot.html
 ```
 
 后续新增主题不会改变已有主题链接。

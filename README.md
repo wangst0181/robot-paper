@@ -49,3 +49,18 @@ python3 scripts/validate_site.py
 3. 构建并发布 GitHub Pages。
 
 PDF 保存在本地工作目录并会进入部署产物，但通过 `.gitignore` 排除在 Git 历史之外，避免仓库因论文文件持续膨胀。
+
+## 日常更新
+
+修改页面后使用以下基本流程：
+
+```bash
+python3 scripts/validate_site.py
+git status --short
+git add -- 需要提交的具体文件
+git diff --cached
+git commit -m "Describe the update"
+git push origin main
+```
+
+完整的同步、暂存、提交、推送、部署检查和错误处理流程见 [`AUTHORING_GUIDE.md`](AUTHORING_GUIDE.md#10-使用-git-命令更新-github)。
