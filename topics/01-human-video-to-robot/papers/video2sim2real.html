@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Video2Sim2Real 论文技术路线中文展示">
+  <title>Video2Sim2Real · 技术路线</title>
+  <link rel="stylesheet" href="../../../assets/styles.css">
+</head>
+<body class="paper-page">
+  <div class="progress" aria-hidden="true"></div>
+  <nav class="site-nav">
+    <div class="site-nav__inner">
+      <a class="brand" href="../01-human-video-to-robot.html">Human Video → Robot</a>
+      <div class="nav-links"><a href="#route">路线</a><a href="#refinement">校正</a><a href="#transfer">迁移</a><a href="human2sim2robot.html">← 上一篇</a></div>
+    </div>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <div class="eyebrow">Paper 02 · Full-stack skill acquisition</div>
+      <h1>Video2Sim2Real：把一段人类视频变成可优化、可迁移的完整机器人技能栈。</h1>
+      <p class="lead">Full-Stack Autonomous Dexterous Skill Acquisition from a Single Human Video。方法先用现成基础模型重建可运行的数字孪生与粗动作先验，再用物体中心关键帧把“动作看起来像”改造成“动作真的影响对象”，最后用 IL 与残差 RL 分工吸收几何和接触误差。</p>
+      <div class="hero-meta">
+        <span class="pill pill--accent">arXiv 2026</span><span class="pill">单段 RGB-D 视频</span><span class="pill">Kinova Gen + LEAP Hand</span><span class="pill pill--warm">IL + Residual RL</span>
+      </div>
+      <div class="actions">
+        <a class="button button--primary" href="../sources/Video2Sim2Real.pdf">打开本地论文 PDF</a>
+        <a class="button" href="https://arxiv.org/abs/2606.08828" target="_blank" rel="noreferrer">arXiv</a>
+        <a class="button" href="https://github.com/video2sim2real/video2sim2real" target="_blank" rel="noreferrer">代码</a>
+        <a class="button" href="../01-human-video-to-robot.html">返回合并主题页</a>
+      </div>
+      <div class="thesis">
+        <div class="thesis-label">一句话路线</div>
+        <p>先把视频转成数字孪生和粗机器人轨迹，再只在接触、交互、脱离等“决定物体命运”的关键帧优化机器人构型；IL 校准对象几何，指级残差 RL 修补接触动力学，必要时再由规划器扩展到新摆放。</p>
+      </div>
+    </header>
+
+    <section class="section" id="route">
+      <div class="section-head">
+        <div class="section-num">01 · PIPELINE</div>
+        <div><h2 class="section-title">这是一个六段式全栈管线，关键桥梁是“物体中心关键帧”。</h2><p class="section-intro">系统并不把重定向轨迹当成真值：它先识别最有物理意义的时刻，再利用数字孪生中的对象几何、位姿与任务类型纠正机器人构型。</p></div>
+      </div>
+      <div class="route route--six" aria-label="Video2Sim2Real 技术路线">
+        <article class="route-step"><div class="route-index">STEP 01</div><h3>场景理解</h3><p>Gemini 识别对象与任务；SAM3 / SAM3D 分割并重建对象级网格与 URDF。</p><span class="route-out">digital twin S</span></article>
+        <article class="route-step"><div class="route-index">STEP 02</div><h3>动作先验</h3><p>HaMeR 估计人手 3D 关键点，Mink 重定向到机器人；CoTracker + 深度得到对象 3D flow。</p><span class="route-out">raw robot / object traj.</span></article>
+        <article class="route-step"><div class="route-index">STEP 03</div><h3>关键帧检测</h3><p>从物体运动识别接触 Tc、交互 Ti 与脱离 Td，而非按时间均匀采样。</p><span class="route-out">object-centric anchors</span></article>
+        <article class="route-step"><div class="route-index">STEP 04</div><h3>轨迹校正</h3><p>按抓取/推/拉任务优化关键帧机器人构型，再用 IK 与插值修正整条轨迹。</p><span class="route-out">refined base trajectory</span></article>
+        <article class="route-step"><div class="route-index">STEP 05</div><h3>解耦迁移</h3><p>IL 从点云回归关键帧手姿；残差 RL 只修正手指，适应摩擦、质量与控制误差。</p><span class="route-out">robust policy stack</span></article>
+        <article class="route-step"><div class="route-index">STEP 06</div><h3>部署与扩展</h3><p>初始点云一次校准，执行中结合对象反馈加指级残差；可选规划器处理远距离新摆放。</p><span class="route-out">real robot skill</span></article>
+      </div>
+
+      <div class="data-flow">
+        <div class="data-row"><div class="data-stage">INPUT</div><div class="data-main"><strong>视频 + 一张清晰参考 RGB-D 图</strong><span>另含相机内参，以及相机、桌面和机器人基座间外参。</span></div><div class="data-output">不需要机器人示范、动作标签或人工奖励。</div></div>
+        <div class="data-row"><div class="data-stage">TWIN OUTPUT</div><div class="data-main"><strong>对象级可运行场景 S</strong><span>每个对象含语义、掩码、规范网格、桌面坐标位姿、URDF；另含操作对象、目标对象与任务类型。</span></div><div class="data-output">不只是视觉重建，而是 simulator-ready 资产。</div></div>
+        <div class="data-row"><div class="data-stage">MOTION PRIOR</div><div class="data-main"><strong>粗机器人轨迹 + 对象 3D flow</strong><span>前者提供人体动作的平滑时序结构；后者提供真正的任务结果和接触方向线索。</span></div><div class="data-output">两种先验在关键帧处汇合。</div></div>
+        <div class="data-row"><div class="data-stage">POLICY OUTPUT</div><div class="data-main"><strong>几何校准的基准轨迹 + 指级残差</strong><span>全局运动由关键帧姿态、IK 和插值产生；RL 不重写整臂，只做局部手指修正。</span></div><div class="data-output">保留平滑、安全，同时适应接触。</div></div>
+      </div>
+    </section>
+
+    <section class="section" id="refinement">
+      <div class="section-head">
+        <div class="section-num">02 · REFINEMENT</div>
+        <div><h2 class="section-title">关键帧不是视频摘要，而是动作因果链上的三个锚点。</h2><p class="section-intro">检测依据来自被操作物体与目标对象的运动变化；校正目标则随抓取、推动、拉取的任务类型改变。</p></div>
+      </div>
+      <div class="grid detail-grid">
+        <article class="card detail-card"><div class="detail-card__label">CONTACT · Tc</div><h3>第一次持续改变物体的时刻</h3><p>以操作物体 2D flow 点质心相对初始帧的持续位移检测。抓取任务通过 Lightning Grasp 产生候选并在仿真中过滤；推/拉任务根据 3D 对象流方向选择表面接触点并对齐指尖法向。</p></article>
+        <article class="card detail-card"><div class="detail-card__label">INTERACTION · Ti</div><h3>操作对象与目标对象关系改变</h3><p>从两类对象相对运动的持续变化检测。通过 3D flow 对应点的刚性 SE(3) 配准估计物体姿态，再与接触时已校正的手-物体变换组合，得到交互帧手姿。</p></article>
+        <article class="card detail-card"><div class="detail-card__label">DETACHMENT · Td</div><h3>完成作用并释放对象</h3><p>接触之后，当操作物体回到靠近桌面的高度阈值下时触发。利用注册后的 3D flow 所估计的目标位姿，优化释放时的手姿。</p></article>
+        <article class="card detail-card interpretation"><span class="read-tag">结构化解读</span><h3>在“全信”与“全丢”之间选择稀疏信任</h3><p>完整重定向轨迹保留人类动作的时间连贯性，但会继承估计误差；完全依赖 RL 又带来高维探索。关键帧法只重算最影响物体状态的构型，其余部分用原轨迹和插值维持顺滑。</p></article>
+      </div>
+
+      <div class="split">
+        <article class="card formula-card"><span class="fact-tag">轨迹构造</span><h3>锚点化校正</h3><div class="formula">raw retargeted trajectory<br>+ optimized {q(Tc), q(Ti), q(Td)}<br>→ IK anchors → interpolation → refined trajectory</div><p>关键帧手姿先变换到机器人基座坐标，再通过 IK 变成关节空间锚点，最终与原始重定向轨迹分段插值。</p></article>
+        <article class="card note-card"><span class="read-tag">结构化解读</span><h3>对象信息决定“动作是否有用”</h3><p>人体手势只说明动作的大致形状。抓取候选能否稳定、推力方向是否正确、释放位姿是否完成任务，都必须在重建对象的几何和物理语境中判断。</p></article>
+      </div>
+    </section>
+
+    <section class="section" id="transfer">
+      <div class="section-head">
+        <div class="section-num">03 · SIM-TO-REAL</div>
+        <div><h2 class="section-title">把迁移误差按尺度拆开：IL 管全局几何，RL 管局部接触。</h2><p class="section-intro">作者避免让单一策略同时处理点云缺失、对象位置偏差、网格误差、摩擦和控制增益变化，从而保护已校正轨迹的平滑与安全属性。</p></div>
+      </div>
+      <div class="grid detail-grid">
+        <article class="card detail-card"><div class="detail-card__label">IMITATION LEARNING · GEOMETRY</div><h3>点云 → 关键帧机器人手姿</h3><ul><li>Mask-aware PointNet 风格残差网络，输入对象点云。</li><li>预测相对对象质心的平移残差与 6D 旋转表示。</li><li>训练时随机对象位姿、坐标抖动和点丢弃，模拟噪声与不完整几何。</li><li>部署时只在机器人进入工作区前查询一次，避免手臂遮挡观测。</li></ul></article>
+        <article class="card detail-card"><div class="detail-card__label">RESIDUAL RL · PHYSICS</div><h3>基准手指轨迹 + 局部关节残差</h3><ul><li>MLP-PPO 观测当前/下一参考关节、3D flow 质心和物体运动增量。</li><li>动作只输出手指关节残差，不改写整臂基准运动。</li><li>任务无关的 3D flow 跟踪奖励 + 残差动作惩罚。</li><li>随机化观测、动作、控制增益、对象尺寸、质量和摩擦。</li></ul></article>
+      </div>
+
+      <div class="data-flow">
+        <div class="data-row"><div class="data-stage">REAL 01</div><div class="data-main"><strong>采集初始 RGB-D，并跟踪对象点云</strong><span>SAM3 与 CoTracker 给出实机对象观测。</span></div><div class="data-output">建立当前对象几何与位姿证据。</div></div>
+        <div class="data-row"><div class="data-stage">REAL 02</div><div class="data-main"><strong>IL 预测当前场景下的关键帧手姿</strong><span>把仿真中优化出的构型重新校准到真实点云。</span></div><div class="data-output">处理几何/感知偏差。</div></div>
+        <div class="data-row"><div class="data-stage">REAL 03</div><div class="data-main"><strong>IK + 插值重新生成基准轨迹</strong><span>以实机关键帧姿态更新整段平滑运动。</span></div><div class="data-output">保持全局运动连贯和避碰结构。</div></div>
+        <div class="data-row"><div class="data-stage">REAL 04</div><div class="data-main"><strong>残差 RL 在每一步修正手指</strong><span>利用实时对象反馈补偿摩擦、质量与接触动力学差异。</span></div><div class="data-output">处理局部物理偏差。</div></div>
+      </div>
+    </section>
+
+    <section class="section" id="evidence">
+      <div class="section-head">
+        <div class="section-num">04 · EVIDENCE</div>
+        <div><h2 class="section-title">关键帧校正提高仿真可执行性，解耦策略提高真实迁移率。</h2><p class="section-intro">实验覆盖 7 项日常操作任务，分别比较轨迹校正策略与 sim-to-real 策略。</p></div>
+      </div>
+      <div class="grid evidence-grid">
+        <article class="card evidence"><div class="evidence-value">91.4%</div><h3>仿真平均任务成功率</h3><p>关键帧校正方法在 7 个任务的跨任务汇总中，同时达到最高成功率、最高安全率与最低轨迹 jerk。</p><div class="source-note">论文 Table 1：91.4±22.7%；10 runs/task。</div></article>
+        <article class="card evidence"><div class="evidence-value">100%</div><h3>仿真安全率</h3><p>对象中心锚点与插值在对齐任务意图的同时，保留人类动作的连贯性，避免 RL 基线产生不合理碰撞。</p><div class="source-note">论文 Table 1：100.0±0.0%。</div></article>
+        <article class="card evidence"><div class="evidence-value">95.7%</div><h3>真实世界平均成功率</h3><p>在对象位姿有局部变化时，方法取得 67/70；使用 FoundationPose 调整并共享同一指级残差 RL 的基线为 11/70。</p><div class="source-note">论文 Table 2：Ours 95.7%，FoundationPose 15.7%。</div></article>
+      </div>
+    </section>
+
+    <section class="section" id="limits">
+      <div class="section-head">
+        <div class="section-num">05 · BOUNDARY</div>
+        <div><h2 class="section-title">全栈并不等于无假设：稀疏关键帧、启发式检测和刚体重建仍是边界。</h2><p class="section-intro">论文把这些限制明确列为后续方向，也给出了 RGB-only、自动标定和触觉残差适配的扩展路线。</p></div>
+      </div>
+      <div class="grid limitations">
+        <article class="card limit-card"><h3>只在稀疏关键帧校正</h3><p>对需要连续在手重定向的任务，三个关键时刻可能不足，未来需要连续轨迹优化。</p></article>
+        <article class="card limit-card"><h3>关键帧检测仍是启发式</h3><p>依赖对象运动阈值和关系变化；复杂长时任务需要更通用的预训练运动理解模型。</p></article>
+        <article class="card limit-card"><h3>只支持非关节对象</h3><p>当前对象级重建与 URDF 生成针对刚体；抽屉、剪刀等关节对象需要更一般的重建管线。</p></article>
+        <article class="card limit-card"><h3>仍需深度与预标定</h3><p>系统使用 RGB-D 和预放置 AprilTag 获得坐标变换；RGB-only 深度估计与自动标定是论文提出的后续方向。</p></article>
+      </div>
+      <article class="card citation-box">
+        <h3>论文与来源</h3>
+        <p>Yunhai Han, Jianuo Qiu, Linhao Bai, et al. “Video2Sim2Real: Full-Stack Autonomous Dexterous Skill Acquisition from a Single Human Video.” arXiv:2606.08828, 2026.</p>
+        <div class="citation-links"><a class="button" href="../sources/Video2Sim2Real.pdf">本地 PDF</a><a class="button" href="https://arxiv.org/abs/2606.08828" target="_blank" rel="noreferrer">arXiv</a><a class="button" href="https://github.com/video2sim2real/video2sim2real" target="_blank" rel="noreferrer">Code</a><a class="button" href="human2sim2robot.html">← 回看 Human2Sim2Robot</a></div>
+      </article>
+    </section>
+  </main>
+  <footer class="footer"><div class="footer__inner"><span>技术路线中文整理 · 依据公开论文版本</span><span>指标均为论文作者报告结果，不代表独立复现。</span></div></footer>
+  <script src="../../../assets/app.js"></script>
+</body>
+</html>

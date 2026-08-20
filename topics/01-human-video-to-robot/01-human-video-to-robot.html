@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Human2Sim2Robot 与 Video2Sim2Real：从单段人类视频到灵巧机器人技术路线对照">
+  <title>从一段人类视频到灵巧机器人 · 两篇论文的技术演进</title>
+  <link rel="stylesheet" href="../../assets/styles.css">
+</head>
+<body class="paper-page">
+  <div class="progress" aria-hidden="true"></div>
+  <nav class="site-nav">
+    <div class="site-nav__inner">
+      <a class="brand" href="../../index.html">Paper Route Atlas</a>
+      <div class="nav-links"><a href="#relation">关系</a><a href="#routes">路线</a><a href="#compare">对照</a><a href="#evidence">证据</a></div>
+    </div>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <div class="eyebrow">Topic 01 · Human video → Simulation → Dexterous robot</div>
+      <h1>从一段人类视频到灵巧机器人：两条路线，两个“该信任什么”的答案。</h1>
+      <p class="lead">Human2Sim2Robot 与 Video2Sim2Real 共享同一个出发点：人类视频容易获得，但人的手部动作不能直接成为机器人的可靠动作标签。前者最大限度放弃动作模仿，让 RL 重新发现机器人行为；后者保留粗动作的时序结构，只在物体中心关键帧纠正它，并将 sim-to-real 误差拆给 IL 与残差 RL。</p>
+      <div class="hero-meta"><span class="pill pill--accent">2 papers</span><span class="pill">单段 RGB-D 示范</span><span class="pill">Real-to-Sim-to-Real</span><span class="pill pill--warm">物体中心监督</span></div>
+      <div class="actions"><a class="button button--primary" href="#routes">进入技术路线</a><a class="button" href="../../index.html">返回主题目录</a><a class="button" href="sources/Human2Sim2Robot.pdf">Human2Sim2Robot PDF</a><a class="button" href="sources/Video2Sim2Real.pdf">Video2Sim2Real PDF</a></div>
+      <div class="thesis"><div class="thesis-label">本组论文的共同问题</div><p>当人类手势既有任务信息、又混有形态学不匹配和感知误差时，机器人究竟应该继承哪些部分，又应该在仿真中重新优化哪些部分？</p></div>
+    </header>
+
+    <section class="section" id="relation">
+      <div class="section-head"><div class="section-num">01 · RELATION</div><div><h2 class="section-title">后者不是简单“加更多模块”，而是把前者的最小监督思想扩展成全栈系统。</h2><p class="section-intro">两篇工作都把任务的核心从“人的手怎么动”转向“对象应发生什么变化”。区别在于，它们对粗重定向动作的信任程度，以及对 sim-to-real 误差的拆分粒度。</p></div></div>
+
+      <div class="relation-band">
+        <article class="card relation-paper"><span class="fact-tag">2025 · CoRL</span><h3>Human2Sim2Robot</h3><p>只保留稠密物体轨迹和一个操作前手势。完整人体动作被舍弃，LSTM-PPO 从头学习适合机器人本体的闭环控制。</p></article>
+        <div class="relation-arrow"><b>→</b>从最小监督<br>到全栈校正</div>
+        <article class="card relation-paper"><span class="fact-tag">2026 · arXiv</span><h3>Video2Sim2Real</h3><p>保留粗重定向轨迹的连贯性，但用对象几何在接触、交互、脱离关键帧纠正；再以 IL + 指级残差 RL 分工迁移。</p></article>
+      </div>
+
+      <div class="grid detail-grid">
+        <article class="card detail-card"><div class="detail-card__label">共同继承</div><h3>对象中心监督</h3><p>两篇都认为对象运动比人手关节更接近任务本质，也更容易跨越人手与机器人手的形态学差异。</p></article>
+        <article class="card detail-card"><div class="detail-card__label">关键分歧</div><h3>粗动作轨迹值不值得保留？</h3><p>Human2Sim2Robot 只用单帧姿态初始化；Video2Sim2Real 保留完整粗轨迹，但只把稀疏优化后的关键帧当作可靠锚点。</p></article>
+        <article class="card detail-card"><div class="detail-card__label">迁移演进</div><h3>从统一随机化到误差解耦</h3><p>前者用域随机化训练一条统一闭环策略；后者将全局几何差交给 IL，将局部接触物理差交给指级残差 RL。</p></article>
+        <article class="card detail-card interpretation"><span class="read-tag">结构化解读</span><h3>研究主线：逐步缩小“需要重新学”的范围</h3><p>第一篇证明少量跨本体监督足以让 RL 学成；第二篇利用数字孪生和关键帧优化，把高维 RL 收缩到最需要自适应的局部接触层。</p></article>
+      </div>
+    </section>
+
+    <section class="section" id="routes">
+      <div class="section-head"><div class="section-num">02 · ROUTES</div><div><h2 class="section-title">并排看技术路线：输入相似，信息瓶颈与学习分工不同。</h2><p class="section-intro">下面每一行都是一次信息变换：从视频证据，到跨本体抽象，再到机器人可执行的控制信号。</p></div></div>
+
+      <div class="lane-grid">
+        <article class="lane">
+          <div class="lane-head"><span class="num">ROUTE A</span><h3>Human2Sim2Robot</h3></div>
+          <div class="lane-step"><div class="lane-num">01</div><div><strong>数字孪生</strong><span>扫描物体 O 与场景 S，建立 KUKA iiwa + Allegro Hand 的 IsaacGym 训练环境。</span></div></div>
+          <div class="lane-step"><div class="lane-num">02</div><div><strong>提取任务规格</strong><span>SAM 2 → 逐帧物体掩码；FoundationPose → 稠密 6D 物体位姿轨迹。</span></div></div>
+          <div class="lane-step"><div class="lane-num">03</div><div><strong>提取探索先验</strong><span>HaMeR + 深度/ICP → 操作前 MANO 手势；cuRobo 两阶段 IK → 机器人初始手姿。</span></div></div>
+          <div class="lane-step"><div class="lane-num">04</div><div><strong>LSTM-PPO 重新发现动作</strong><span>稠密对象轨迹奖励 + 操作前姿态初始化；输出掌心目标与 5D eigengrasp。</span></div></div>
+          <div class="lane-step"><div class="lane-num">05</div><div><strong>域随机化与零样本部署</strong><span>随机质量、摩擦、惯量、位姿噪声与外力；实机不再微调。</span></div></div>
+        </article>
+
+        <article class="lane">
+          <div class="lane-head"><span class="num">ROUTE B</span><h3>Video2Sim2Real</h3></div>
+          <div class="lane-step"><div class="lane-num">01</div><div><strong>对象级数字孪生</strong><span>Gemini + SAM3 + SAM3D → 语义、掩码、规范网格、桌面位姿与可运行 URDF。</span></div></div>
+          <div class="lane-step"><div class="lane-num">02</div><div><strong>两类运动先验</strong><span>HaMeR + Mink → 粗机器人轨迹；CoTracker + 深度 → 对象 3D flow。</span></div></div>
+          <div class="lane-step"><div class="lane-num">03</div><div><strong>对象中心关键帧校正</strong><span>检测接触 Tc、交互 Ti、脱离 Td；按抓取/推/拉任务优化机器人构型。</span></div></div>
+          <div class="lane-step"><div class="lane-num">04</div><div><strong>锚点插值成基准轨迹</strong><span>优化手姿 → 基座坐标 → IK 关节锚点 → 与粗轨迹分段插值。</span></div></div>
+          <div class="lane-step"><div class="lane-num">05</div><div><strong>解耦 sim-to-real</strong><span>IL：点云到关键帧手姿；残差 RL：基准手指轨迹上的局部关节修正。</span></div></div>
+          <div class="lane-step"><div class="lane-num">06</div><div><strong>实机与空间扩展</strong><span>初始点云校准 + 执行期 flow 反馈；可选碰撞感知规划器处理远距离新摆放。</span></div></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="mechanism">
+      <div class="section-head"><div class="section-num">03 · MECHANISM</div><div><h2 class="section-title">两篇论文分别把监督放在“整条对象轨迹”和“稀疏对象关键帧”。</h2><p class="section-intro">这对应两种策略：让奖励持续牵引整个行为，或先离线修正决定成败的构型，再学习迁移残差。</p></div></div>
+      <div class="split">
+        <article class="card formula-card"><span class="fact-tag">Human2Sim2Robot</span><h3>稠密对象轨迹奖励</h3><div class="formula">rᵗ = exp[-α · Σᵢ ||T_target^(τ+t)kᵢ − T_obj^t kᵢ||]</div><p>物体局部锚点把位置和方向误差统一成距离。中间轨迹保留借墙翻转、抬起再放置等任务逻辑，却不约束人手动作。</p></article>
+        <article class="card formula-card"><span class="fact-tag">Video2Sim2Real</span><h3>关键帧锚点化轨迹校正</h3><div class="formula">raw trajectory + optimized {q(Tc), q(Ti), q(Td)}<br>→ IK anchors → interpolation</div><p>对象信息用于判断抓取候选、接触方向、交互姿态与释放位姿；原始动作只保留平滑的时间骨架。</p></article>
+      </div>
+      <div class="grid detail-grid">
+        <article class="card detail-card"><div class="detail-card__label">WHY DENSE?</div><h3>终点奖励不足以描述接触策略</h3><p>只给最终物体位姿容易产生错误局部最优；稠密轨迹让策略看到通往目标所需的中间对象状态。</p></article>
+        <article class="card detail-card"><div class="detail-card__label">WHY KEYFRAMES?</div><h3>逐帧信任重定向会继承感知误差</h3><p>只重算物理意义最大的构型，能在不进入全维 RL 探索的前提下修复“手看似对齐但并未有效作用对象”的问题。</p></article>
+      </div>
+    </section>
+
+    <section class="section" id="compare">
+      <div class="section-head"><div class="section-num">04 · COMPARE</div><div><h2 class="section-title">用一张表定位两篇论文各自解决的问题。</h2><p class="section-intro">它们不是互相替代的相同方案，而是对同一研究主线的不同系统取舍。</p></div></div>
+      <div class="compare-table"><table>
+        <thead><tr><th>维度</th><th>Human2Sim2Robot</th><th>Video2Sim2Real</th></tr></thead>
+        <tbody>
+          <tr><td>核心问题</td><td>最少的人体监督能否跨越人-机器人形态学差异？</td><td>如何从单视频自动完成重建、校正、迁移与泛化的全栈技能获取？</td></tr>
+          <tr><td>信任的人体信息</td><td>稠密对象轨迹 + 一个操作前手势。</td><td>对象 flow + 粗重定向轨迹的时序结构。</td></tr>
+          <tr><td>拒绝信任的部分</td><td>完整人体手轨迹与由其生成的逐帧动作标签。</td><td>未经对象几何验证的关键构型，以及粗轨迹作为执行真值。</td></tr>
+          <tr><td>机器人动作如何产生</td><td>PPO 在仿真中学习完整闭环策略。</td><td>关键帧优化 + IK/插值得到基准轨迹，RL 只输出指级残差。</td></tr>
+          <tr><td>sim-to-real</td><td>统一策略 + 动力学/观测/外力随机化，零样本部署。</td><td>IL 处理全局几何差，残差 RL 处理局部接触物理差。</td></tr>
+          <tr><td>泛化范围</td><td>训练随机化范围内的初始物体位姿与扰动。</td><td>IL 支持局部位姿变化；可选规划器扩展到更远的新对象配置。</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section class="section" id="evidence">
+      <div class="section-head"><div class="section-num">05 · EVIDENCE</div><div><h2 class="section-title">论文报告的结果分别验证“重新学习动作”和“分层校正迁移”。</h2><p class="section-intro">以下均为论文作者报告结果，不代表独立复现。</p></div></div>
+      <div class="grid evidence-grid">
+        <article class="card evidence"><div class="evidence-value">+55%</div><h3>Human2Sim2Robot vs. OA Replay</h3><p>跨 7 项真实任务相对 Object-Aware Replay 的平均成功率优势，支持闭环、本体特定重新学习。</p><div class="source-note">Human2Sim2Robot, Figure 6；10 rollouts/task。</div></article>
+        <article class="card evidence"><div class="evidence-value">91.4%</div><h3>关键帧校正的仿真成功率</h3><p>Video2Sim2Real 跨 7 项任务的平均成功率，同时报告 100% 安全率与最低轨迹 jerk。</p><div class="source-note">Video2Sim2Real, Table 1。</div></article>
+        <article class="card evidence"><div class="evidence-value">95.7%</div><h3>解耦策略的实机成功率</h3><p>对象位姿有局部变化时为 67/70；共享同一指级残差策略的 FoundationPose 基线为 11/70。</p><div class="source-note">Video2Sim2Real, Table 2。</div></article>
+      </div>
+    </section>
+
+    <section class="section" id="boundary">
+      <div class="section-head"><div class="section-num">06 · BOUNDARY</div><div><h2 class="section-title">共同边界：系统仍偏向可重建、可跟踪、可刚体仿真的桌面对象。</h2><p class="section-intro">两篇路线尚未自然覆盖可变形对象、复杂关节对象或长时连续在手重定向。</p></div></div>
+      <div class="grid limitations">
+        <article class="card limit-card"><h3>感知与重建依赖</h3><p>对称、反光或遮挡对象会影响 6D 位姿与 3D flow；数字孪生质量直接影响奖励、优化和迁移。</p></article>
+        <article class="card limit-card"><h3>对象类型边界</h3><p>Human2Sim2Robot 以刚体位姿定义任务；Video2Sim2Real 的重建目前只支持非关节对象。</p></article>
+        <article class="card limit-card"><h3>任务规模</h3><p>前者当前训练单对象、单任务策略；后者的启发式稀疏关键帧可能不足以表达长时复杂操作。</p></article>
+        <article class="card limit-card"><h3>研究延伸</h3><p>多对象条件化策略、连续关键帧优化、自动标定、RGB-only 重建和触觉残差适配都是自然后续方向。</p></article>
+      </div>
+
+      <article class="card citation-box">
+        <h3>论文入口与补充详情</h3>
+        <p>本页将两篇论文作为一个研究关系组展示；如需查看更细的观测空间、动作空间、训练目标和限制，可进入保留的单篇扩展页。</p>
+        <div class="citation-links"><a class="button" href="papers/human2sim2robot.html">Human2Sim2Robot 扩展页</a><a class="button" href="papers/video2sim2real.html">Video2Sim2Real 扩展页</a><a class="button" href="sources/Human2Sim2Robot.pdf">论文 PDF 01</a><a class="button" href="sources/Video2Sim2Real.pdf">论文 PDF 02</a></div>
+      </article>
+    </section>
+  </main>
+  <footer class="footer"><div class="footer__inner"><span>Topic 01 · 单段人类视频到灵巧机器人</span><span>技术路线依据公开论文整理；实验指标为作者报告。</span></div></footer>
+  <script src="../../assets/app.js"></script>
+</body>
+</html>

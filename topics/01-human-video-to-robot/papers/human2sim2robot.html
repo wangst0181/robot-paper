@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Human2Sim2Robot 论文技术路线中文展示">
+  <title>Human2Sim2Robot · 技术路线</title>
+  <link rel="stylesheet" href="../../../assets/styles.css">
+</head>
+<body class="paper-page">
+  <div class="progress" aria-hidden="true"></div>
+  <nav class="site-nav">
+    <div class="site-nav__inner">
+      <a class="brand" href="../01-human-video-to-robot.html">Human Video → Robot</a>
+      <div class="nav-links"><a href="#route">路线</a><a href="#learning">学习</a><a href="#evidence">证据</a><a href="video2sim2real.html">下一篇 →</a></div>
+    </div>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <div class="eyebrow">Paper 01 · Real-to-Sim-to-Real RL</div>
+      <h1>Human2Sim2Robot：不模仿人的动作，只借用人的任务意图。</h1>
+      <p class="lead">Crossing the Human-Robot Embodiment Gap with Sim-to-Real RL using One Human Demonstration。作者将单次 RGB-D 示范压缩成两个跨形态学信号：稠密物体位姿轨迹与一个操作前手势，然后用仿真强化学习为机器人本体重新发现动作。</p>
+      <div class="hero-meta">
+        <span class="pill pill--accent">CoRL 2025</span><span class="pill">单段 RGB-D 视频</span><span class="pill">KUKA iiwa + Allegro Hand</span><span class="pill pill--warm">Zero-shot Sim-to-Real</span>
+      </div>
+      <div class="actions">
+        <a class="button button--primary" href="../sources/Human2Sim2Robot.pdf">打开本地论文 PDF</a>
+        <a class="button" href="https://human2sim2robot.github.io/" target="_blank" rel="noreferrer">项目主页</a>
+        <a class="button" href="https://github.com/tylerlum/human2sim2robot" target="_blank" rel="noreferrer">代码</a>
+        <a class="button" href="../01-human-video-to-robot.html">返回合并主题页</a>
+      </div>
+      <div class="thesis">
+        <div class="thesis-label">一句话路线</div>
+        <p>从人类视频提取“物体要怎么动”作为奖励，再提取“手应从哪里接近”作为探索起点；至于机器人究竟怎样发力、抓取和恢复，由 PPO 在数字孪生中用自己的身体学出来。</p>
+      </div>
+    </header>
+
+    <section class="section" id="route">
+      <div class="section-head">
+        <div class="section-num">01 · PIPELINE</div>
+        <div><h2 class="section-title">从一次示范到实机策略，共五个信息变换。</h2><p class="section-intro">核心不是人手到机器人手的逐帧映射，而是先把示范拆成“任务规格”和“探索先验”，再让闭环策略吸收形态学差异与动力学不确定性。</p></div>
+      </div>
+
+      <div class="route" aria-label="Human2Sim2Robot 技术路线">
+        <article class="route-step"><div class="route-index">STEP 01</div><h3>数字孪生</h3><p>扫描目标物体与静态场景，建立机器人、物体和桌面环境的仿真副本。</p><span class="route-out">O, S meshes</span></article>
+        <article class="route-step"><div class="route-index">STEP 02</div><h3>提取任务规格</h3><p>SAM 2 产生逐帧掩码，FoundationPose 估计目标物体的完整 6D 位姿轨迹。</p><span class="route-out">{Tᵗ_target}</span></article>
+        <article class="route-step"><div class="route-index">STEP 03</div><h3>提取探索先验</h3><p>HaMeR + 深度/ICP 得到人手姿态；在物体开始运动前选取一个手势并用两阶段 IK 重定向。</p><span class="route-out">wrist pose + hand joints</span></article>
+        <article class="route-step"><div class="route-index">STEP 04</div><h3>仿真强化学习</h3><p>以物体轨迹为稠密奖励，以操作前手势初始化状态；LSTM-PPO 学习掌心与手指控制。</p><span class="route-out">closed-loop policy</span></article>
+        <article class="route-step"><div class="route-index">STEP 05</div><h3>零样本实机</h3><p>训练中随机化动力学、观测和外力；部署时使用实时物体位姿，不进行实机微调。</p><span class="route-out">real robot rollout</span></article>
+      </div>
+
+      <div class="data-flow" aria-label="Human2Sim2Robot 数据流">
+        <div class="data-row"><div class="data-stage">INPUT</div><div class="data-main"><strong>一个 RGB-D 人类操作视频</strong><span>已知相机内外参；另有物体网格和静态场景网格。</span></div><div class="data-output">不是机器人示范，不含动作标签。</div></div>
+        <div class="data-row"><div class="data-stage">PERCEPTION</div><div class="data-main"><strong>物体流与手势流分开处理</strong><span>物体：SAM 2 → FoundationPose。手：HaMeR → 深度对齐 → ICP。</span></div><div class="data-output">输出任务轨迹与 MANO 手势。</div></div>
+        <div class="data-row"><div class="data-stage">ABSTRACTION</div><div class="data-main"><strong>保留“what”与一个“where to start”</strong><span>完整物体轨迹规定任务；物体首次持续运动前的手势定义初始接近姿态。</span></div><div class="data-output">删除完整人体动作依赖。</div></div>
+        <div class="data-row"><div class="data-stage">CONTROL</div><div class="data-main"><strong>策略输出掌心目标 + 5 维 eigengrasp</strong><span>几何 fabric controller 将高层目标转成整臂与手指关节控制。</span></div><div class="data-output">机器人本体特定的闭环动作。</div></div>
+      </div>
+    </section>
+
+    <section class="section" id="learning">
+      <div class="section-head">
+        <div class="section-num">02 · LEARNING</div>
+        <div><h2 class="section-title">两个来自视频的量，分别解决奖励设计与探索效率。</h2><p class="section-intro">物体轨迹回答“任务完成过程应是什么样”，操作前手势回答“高维接触策略从哪里开始试”。二者都不要求机器人复现人的完整关节运动。</p></div>
+      </div>
+
+      <div class="split">
+        <article class="card formula-card">
+          <span class="fact-tag">论文事实</span>
+          <h3>物体中心的稠密轨迹奖励</h3>
+          <div class="formula">rᵗ_obj = exp[-α · d(T_target^(τ+t), T_obj^t)]<br>d(T₁,T₂) = Σᵢ || T₁kᵢ − T₂kᵢ ||</div>
+          <p>作者在物体局部坐标系放置锚点，把位置和方向误差统一为锚点间距离。α=10；多数物体使用 3 个锚点，方向权重由锚点离原点的尺度 L 控制。</p>
+        </article>
+        <article class="card note-card">
+          <span class="read-tag">结构化解读</span>
+          <h3>为什么不是“只给终点”？</h3>
+          <p>对抬盘、借墙翻转等任务，直接追终点会把策略吸进错误的局部最优。稠密物体轨迹保留人类演示中的中间接触逻辑，却不约束机器人必须使用相同的手指动作。</p>
+        </article>
+      </div>
+
+      <div class="grid detail-grid">
+        <article class="card detail-card"><div class="detail-card__label">STATE INITIALIZATION</div><h3>操作前手势只负责“把探索送到正确邻域”</h3><ul><li>物体速度首次超过 5 cm/s 的时刻记为 t₀，在其前固定偏移处选择 τ。</li><li>用中指根部对齐手腕，再用机器人指尖对齐人类指尖，完成两阶段 cuRobo IK。</li><li>重置时在该姿态和初始物体位姿周围加小扰动，保持探索多样性。</li></ul></article>
+        <article class="card detail-card"><div class="detail-card__label">POLICY & ACTION</div><h3>LSTM-PPO 学习机器人自己的控制闭环</h3><ul><li>观测含关节角/速度、指尖、掌心、当前物体与当前目标锚点位置。</li><li>动作含 3D 掌心位置、3D 掌心欧拉角，以及 5D PCA 手型目标。</li><li>LSTM 用历史处理部分可观测与噪声；PPO 在 IsaacGym 中并行训练。</li></ul></article>
+        <article class="card detail-card"><div class="detail-card__label">DOMAIN RANDOMIZATION</div><h3>训练时主动制造迁移误差</h3><ul><li>随机化质量、惯量、摩擦等真实世界中难以精确知道的动力学参数。</li><li>向物体位姿观测加入噪声，模拟感知和标定误差。</li><li>施加随机外力，增强对意外接触、扰动和动力学变化的恢复能力。</li></ul></article>
+        <article class="card detail-card interpretation"><span class="read-tag">结构化解读</span><h3>真正跨越形态学鸿沟的是“重新优化”</h3><p>人类示范负责规定任务和缩小搜索区域；策略的动作标签不来自人手重定向，而来自机器人在自己动力学与关节约束下的试错。因此，感知误差不会作为一条固定动作轨迹被逐帧放大。</p></article>
+      </div>
+    </section>
+
+    <section class="section" id="evidence">
+      <div class="section-head">
+        <div class="section-num">03 · EVIDENCE</div>
+        <div><h2 class="section-title">实验支持的不是单点性能，而是三项设计选择。</h2><p class="section-intro">作者在抓取、非抓取、外在灵巧与多步任务上测试，并用最复杂的 plate-pivot-lift-rack 任务做仿真消融。</p></div>
+      </div>
+      <div class="grid evidence-grid">
+        <article class="card evidence"><div class="evidence-value">+55%</div><h3>相对 Object-Aware Replay</h3><p>跨 7 项真实任务的平均成功率优势。闭环、机器人本体特定的策略优于按初始物体位姿扭曲后再开环回放。</p><div class="source-note">论文 Figure 6；每项任务 10 次 rollout。</div></article>
+        <article class="card evidence"><div class="evidence-value">+68%</div><h3>相对 Behavior Cloning</h3><p>BC 使用由单次示范增广出的 30 条轨迹，仍受低质量重定向动作与滚动误差影响。</p><div class="source-note">论文 Figure 6；作者报告的跨任务差值。</div></article>
+        <article class="card evidence"><div class="evidence-value">1 pose</div><h3>一个手势已经足够</h3><p>完整手轨迹奖励没有带来实质最终增益，残差回放则受错误基准轨迹拖累；一个操作前手势更直接地提升探索效率。</p><div class="source-note">论文 Figure 8–9 的消融结论。</div></article>
+      </div>
+    </section>
+
+    <section class="section" id="limits">
+      <div class="section-head">
+        <div class="section-num">04 · BOUNDARY</div>
+        <div><h2 class="section-title">局限：它把动作监督降到极低，但仍依赖可跟踪、可仿真的对象世界。</h2><p class="section-intro">这些边界决定了方法更适合刚体桌面操作，而不是直接推广到多对象、关节物体或可变形物体。</p></div>
+      </div>
+      <div class="grid limitations">
+        <article class="card limit-card"><h3>单对象、单任务策略</h3><p>当前任务由单个对象的位姿轨迹规定；多对象交互需要扩展状态、奖励与条件化策略。</p></article>
+        <article class="card limit-card"><h3>感知器与仿真器质量</h3><p>方法假设可靠的 6D 物体位姿估计和刚体仿真；对称物体存在位姿歧义，反光物体存在深度/姿态噪声。</p></article>
+        <article class="card limit-card"><h3>机器人本体泛化尚未充分量化</h3><p>主实验使用 KUKA + Allegro Hand；论文给出 LEAP Hand 与 UMI gripper 的初步测试，但未做同等规模评估。</p></article>
+        <article class="card limit-card"><h3>可变形与关节对象</h3><p>现有物体状态和模拟建立在刚体假设上；布料、绳索、抽屉等需要新的状态估计和仿真表达。</p></article>
+      </div>
+      <article class="card citation-box">
+        <h3>论文与来源</h3>
+        <p>Tyler Ga Wei Lum, Olivia Y. Lee, C. Karen Liu, Jeannette Bohg. “Crossing the Human-Robot Embodiment Gap with Sim-to-Real RL using One Human Demonstration.” CoRL 2025 / arXiv:2504.12609.</p>
+        <div class="citation-links"><a class="button" href="../sources/Human2Sim2Robot.pdf">本地 PDF</a><a class="button" href="https://arxiv.org/abs/2504.12609" target="_blank" rel="noreferrer">arXiv</a><a class="button" href="https://human2sim2robot.github.io/" target="_blank" rel="noreferrer">Project</a><a class="button" href="video2sim2real.html">继续看 Video2Sim2Real →</a></div>
+      </article>
+    </section>
+  </main>
+  <footer class="footer"><div class="footer__inner"><span>技术路线中文整理 · 依据公开论文版本</span><span>指标均为论文作者报告结果，不代表独立复现。</span></div></footer>
+  <script src="../../../assets/app.js"></script>
+</body>
+</html>

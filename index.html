@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="按研究主题组织的论文技术路线与关系图谱">
+  <title>Paper Route Atlas · 论文技术路线主题目录</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <div class="progress" aria-hidden="true"></div>
+  <main>
+    <section class="hero">
+      <div class="eyebrow">Paper Route Atlas · Research topic index</div>
+      <h1>不是一篇论文一个页面，而是一个研究问题一条证据链。</h1>
+      <p class="lead">每个主题 HTML 可以包含多篇互相关联的论文：先交代共同问题，再并列技术路线、梳理继承与分歧，最后用实验和局限界定结论。后续新增论文组时，只需在这里增加一张主题卡片。</p>
+      <div class="legend" aria-label="内容标记说明">
+        <span><i></i>论文事实</span><span><i></i>结构化解读</span>
+      </div>
+    </section>
+
+    <section class="grid paper-grid" aria-label="研究主题">
+      <a class="card paper-card" href="topics/01-human-video-to-robot/01-human-video-to-robot.html">
+        <div class="num">TOPIC 01 · 2 PAPERS</div>
+        <h2>从一段人类视频到灵巧机器人</h2>
+        <p>把 Human2Sim2Robot 与 Video2Sim2Real 放在同一条研究演进线上：比较它们如何选择值得继承的人类先验，以及如何在仿真中重新优化机器人动作。</p>
+        <div class="card-route">Human2Sim2Robot → 最小跨本体监督<br>Video2Sim2Real → 关键帧校正与解耦迁移</div>
+        <div class="meta">已完成 · 技术关系、并行路线、机制对照、实验与边界</div>
+      </a>
+
+      <div class="card paper-card planned" aria-disabled="true">
+        <div class="num">TOPIC 02 · RESERVED</div>
+        <h2>下一组相关论文</h2>
+        <p>未来可围绕同一个研究问题放入多篇论文，并复用本主题页的关系图、并行路线、证据卡片和比较表结构。</p>
+        <div class="card-route">共同问题 → 论文关系 → 技术路线 → 实验证据 → 研究空白</div>
+        <div class="meta">待新增</div>
+      </div>
+    </section>
+  </main>
+  <footer class="footer"><div class="footer__inner"><span>整理时间：2026-08-20</span><span>内容依据论文公开版本；指标为作者报告结果。</span></div></footer>
+  <script src="assets/app.js"></script>
+</body>
+</html>
